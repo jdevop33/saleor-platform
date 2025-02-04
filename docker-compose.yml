@@ -4,7 +4,7 @@ services:
   api:
     image: ghcr.io/saleor/saleor:3.20
     ports:
-      - 8000:8000
+      - "8080:8000"  # Changed to 8080 for Cloud Run compatibility
     restart: unless-stopped
     networks:
       - saleor-backend-tier
@@ -15,8 +15,7 @@ services:
       - redis
       - jaeger
     volumes:
-      # shared volume between worker and api for media
-      - saleor-media:/app/media
+      - saleor-media:/app/media  # Shared volume for media storage
     env_file:
       - common.env
       - backend.env
@@ -24,17 +23,22 @@ services:
       - JAEGER_AGENT_HOST=jaeger
       - DASHBOARD_URL=http://localhost:9000/
       - ALLOWED_HOSTS=localhost,api
+      - PORT=8080  # Required for Cloud Run
 
   dashboard:
     image: ghcr.io/saleor/saleor-dashboard:latest
     ports:
-      - 9000:80
+      - "8081:80"  # Map dashboard to port 8081 to avoid conflicts
     restart: unless-stopped
+    networks:
+      - saleor-backend-tier
+    environment:
+      - API_URL=http://api:8080/graphql/  # Ensure API URL points to the correct internal service
 
   db:
-    image: library/postgres:15-alpine
+    image: postgres:15-alpine
     ports:
-      - 5432:5432
+      - "5432:5432"
     restart: unless-stopped
     networks:
       - saleor-backend-tier
@@ -44,11 +48,12 @@ services:
     environment:
       - POSTGRES_USER=saleor
       - POSTGRES_PASSWORD=saleor
+      - POSTGRES_DB=saleor
 
   redis:
-    image: library/redis:7.0-alpine
+    image: redis:7.0-alpine
     ports:
-      - 6379:6379
+      - "6379:6379"
     restart: unless-stopped
     networks:
       - saleor-backend-tier
@@ -68,8 +73,7 @@ services:
       - redis
       - mailpit
     volumes:
-      # shared volume between worker and api for media
-      - saleor-media:/app/media
+      - saleor-media:/app/media  # Shared volume for worker tasks
 
   jaeger:
     image: jaegertracing/all-in-one
@@ -91,8 +95,8 @@ services:
   mailpit:
     image: axllent/mailpit
     ports:
-      - 1025:1025 # smtp server
-      - 8025:8025 # web ui. Visit http://localhost:8025/ to check emails
+      - "1025:1025" # SMTP server
+      - "8025:8025" # Web UI: http://localhost:8025/
     restart: unless-stopped
     networks:
       - saleor-backend-tier

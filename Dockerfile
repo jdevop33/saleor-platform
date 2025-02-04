@@ -1,26 +1,20 @@
+# Use a lightweight Python image
 FROM python:3.9-slim
 
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# Copy dependencies first for caching benefits
 COPY requirements.txt .
-RUN pip install -r requirements.txt
 
-# Copy application code
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files last to optimize layer caching
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Expose port 8080 for Google Cloud Run
+EXPOSE 8080
 
-# Run migrations
-RUN python manage.py migrate
-
-EXPOSE 8000
-
-CMD ["gunicorn", "saleor.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Use Gunicorn for production with Saleor WSGI
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "saleor.wsgi:application"]
