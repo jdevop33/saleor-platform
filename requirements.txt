@@ -3,3 +3,7 @@ Django>=3.2,<4.0
 celery
 redis
 psycopg2-binary
+saleor
+saleor-graphql
+saleor-core
+uvicorn
